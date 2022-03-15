@@ -21,6 +21,10 @@ library(shinyjs)
 
 library(glue)
 
+library(dplyr)
+library(ggplot2)
+library(plotly)
+library(stringr)
 
 
 # 2 - set defaults ------------------------------------------------------------
@@ -30,20 +34,49 @@ projected_crs <- 3310 # see: https://epsg.io/3310
 # resources: 
 # https://nrm.dfg.ca.gov/FileHandler.ashx?DocumentID=109326&inline
 
-geographic_crs <- 4269 # see: https://epsg.io/4269
+geographic_crs <- 4326 #4269 # see: https://epsg.io/4269
 # see: https://epsg.io/4326
+
+# Turn off s2
+sf::sf_use_s2(FALSE)
 
 ## choices
 list_tribal_data <- list('Bureau of Indian Affairs' = 'BIA_National_LAR.gpkg',
                          'Census Bureau' = 'native_areas_census.gpkg')
 
+## variables for tribal lands data
+tribal_data_id_field <- list('Bureau of Indian Affairs' = 'LARID',
+                             'Census Bureau' = 'AFFGEOID')  # Is AFFGEOID the best value to use for the ID?
+tribal_data_name_field <- list('Bureau of Indian Affairs' = 'LARName',
+                               'Census Bureau' = 'NAME')
+
 unlist(unname(list_tribal_data))
 
 
 
+
 # 3 - define UI ---------------------------------------------------------------
-ui <- navbarPage(title = "California Tribal Data", # theme = shinythemes::shinytheme('flatly'),
-                 
+ui <- tagList(
+        tags$head(
+            tags$style(HTML("
+                @import url('https://fonts.googleapis.com/css2?family=Open+Sans&display=swap');
+                body { 
+                    font-family: 'Open Sans', sans-serif;
+                }
+                h4 {
+                    font-size: 14px;
+                    font-weight: 700;
+                }
+                #sidebar {
+                    border-radius: 0;
+                    box-shadow: inset 0 0 0 rgba(0,0,0,.05);
+                    -webkit-box-shadow: inset 0 0 0 rgba(0,0,0,.05);
+                }
+            "))
+        ),
+        navbarPage(title = "California Tribal Data", 
+                 # theme = shinythemes::shinytheme('flatly'),
+
                  ## A - Maps / Tabular Data Tab ----
                  tabPanel('Map', icon = icon('map'),
                           
@@ -78,32 +111,40 @@ ui <- navbarPage(title = "California Tribal Data", # theme = shinythemes::shinyt
                           sidebarLayout(
                               ### 2 - Sidebar ----
                               # div(id ="Sidebar", sidebarPanel(
-                              sidebarPanel(
-                                  # Inputs:
-                                  selectInput(inputId = 'tribal_boundaries_selected',
-                                              label = 'Select Tribal Boundaries:',
-                                              choices = names(list_tribal_data)#,
-                                              # selected = initial_selected_city
-                                  ), # ifelse (initial_zoom_level == 'State', 'Statewide', initial_selected_city)),
-                                  hr(style = "border: 1px solid darkgrey"),
-                                  h4('Mobile Home Parks:')
+                              sidebarPanel(id='sidebar',
+                                     
+                                     # Inputs
+                                     selectInput(inputId = 'tribal_boundaries_selected',
+                                                 label = 'Select Tribal Boundaries:',
+                                                 choices = names(list_tribal_data)#,
+                                                 # selected = initial_selected_city
+                                     ), # ifelse (initial_zoom_level == 'State', 'Statewide', initial_selected_city)),
+                                     h4('Tribal Lands with Mobile Home Parks'),
+                                     # Chart output
+                                     plotlyOutput('barplot1')
                               ), # end of sidebarPanel
                               
                               ### 3 - Main panel ----
                               # Main panel for displaying outputs 
                               mainPanel(
-                                  fluidRow(
-                                      div(style = "display:inline-block;vertical-align:top;",
-                                          # actionButton("toggleSidebar", "Toggle sidebar"),
-                                          actionButton("showpanel", "Show/Hide Sidebar", 
-                                                       class = "buttonstyle", icon = icon('bars'), 
-                                                       style = 'padding:4px; font-size:80%')#, # 'display:inline;'), 
-                                          
+                                  column(width=12, style='padding:0px;',
+                                      fluidRow(
+                                          div(style = "display:inline-block;vertical-align:top;padding-bottom:8px",
+                                              # actionButton("toggleSidebar", "Toggle sidebar"),
+                                              actionButton("showpanel", "Show/Hide Sidebar", 
+                                                           class = "buttonstyle", icon = icon('bars'), 
+                                                           style = 'padding:4px; font-size:80%')#, # 'display:inline;'), 
+                                              
+                                          )
                                       ),
                                       fluidRow(
-                                          leafletOutput(outputId = 'map1', height = 400) %>% withSpinner(color="#0dc5c1")
+                                          leafletOutput(outputId = 'map1', width='100%', height = 400) %>% withSpinner(color="#0dc5c1")
                                       ),
-                                  ),
+                                      fluidRow(
+                                          h4('Mobile Home Parks - Details'),
+                                          DT::dataTableOutput('table1', width='100%')
+                                      )
+                                  )
                               ) # end of mainPanel
                           ) # end of sidebarLayout
                  ), ## end of tabPanel (for Map)
@@ -125,7 +166,7 @@ ui <- navbarPage(title = "California Tribal Data", # theme = shinythemes::shinyt
                               
                           )
                  ) ## end of tabPanel (for Info)
-                 
+        )
 ) # end of UI
 
 
@@ -143,12 +184,142 @@ server <- function(input, output, session) {
     sf_ca_boundary <- st_read('data_processed/ca_boundary.gpkg')
     
     ## read tribal boundaries ----
-    sf_tribal_boundaries <- reactive(
-        st_read(paste0('data_processed/',
-                       list_tribal_data[[input$tribal_boundaries_selected]]))
-    ) %>%
-        debounce(1000) %>%
+    sf_tribal_boundaries <- reactive({
+        boundaries <- st_read(paste0('data_processed/',
+        list_tribal_data[[input$tribal_boundaries_selected]]))
+        boundaries <- st_transform(boundaries, 4326)
+        # Fix geometries - otherwise 'invalid geometry' errors come up when running spatial operations
+        boundaries = st_make_valid(boundaries)
+        return(boundaries)
+    }) %>%
+        debounce(0) %>%
         {.}
+    
+    #observeEvent(sf_tribal_boundaries(), {
+    #    print(user_selection$tribal)
+    #    if (!is.null(user_selection$tribal)) {
+    #        user_selection$tribal = NULL
+     #   }
+    #})
+    
+    tribal1 = st_read('data_processed/BIA_National_LAR.gpkg')
+    tribal2 = st_read('data_processed/native_areas_census.gpkg')
+    
+    # Calculate the number of mobile home parks in all tribal land features
+    chart_data <- reactive({
+        tribal_boundaries <- sf_tribal_boundaries()
+        # Add the count of intersecting mobile home parks to tribal land dataset
+        tribal_boundaries$Count <- lengths(st_intersects(sf_tribal_boundaries(), sf_ca_mhp()))
+        # Keep tribal land boundaries that have at least one intersecting mobile home park
+        tribal_boundaries <- tribal_boundaries %>%
+            filter(Count > 0)
+       return(tribal_boundaries)
+    })
+    
+    # Track user input/selection, null by default
+    user_selection <- reactiveValues()
+    user_selection$tribal = NULL
+    
+    # Read mobile home parks dataset
+    mh_parks <- st_read('data_processed/ca_mhp_geocode.gpkg')
+    mh_parks <- st_transform(mh_parks, 4326)
+    
+    # Filter mobile home parks dataset for display on map and table
+    sf_ca_mhp <- reactive({
+        parks <- mh_parks
+        # Find mh parks that intersect with a tribal land
+        # st_intersects returns a list of results for each park - evaluated against every tribal land poly
+        # Find the count of intersections for each park using lengths
+        parks$Intersection <- lengths(st_intersects(parks, sf_tribal_boundaries()))
+        # Filter dataset to keep only the parks that intersect with a tribal land
+        filtered = parks %>%
+            dplyr::filter(Intersection > 0) 
+        return(filtered)
+    })
+    
+    # Old code, can delete, don't need this unless want to revert back to static loading of mhp data
+    #sf_ca_mhp <- st_read('data_processed/ca_mhp_geocode.gpkg') %>%
+    #sf_ca_mhp <- st_transform(sf_ca_mhp, 4326)
+    #sf_ca_mhp$Intersection <- st_intersects(sf_ca_mhp, sf_tribal_boundaries, sparse=FALSE)
+    # Filter dataset to keep the parks that intersect with a tribal land
+    #result = mhp_data %>%
+        #dplyr::filter(Intersection == TRUE) 
+    #return(result)
+    
+    table <- reactiveValues(data = NULL)
+   
+    observeEvent(sf_tribal_boundaries(), {
+        # Clear user selection when changing boundary datasets
+        user_selection$tribal = NULL
+        parks = sf_ca_mhp()
+        # Drop unneeded columns, don't want to show these in the table
+        drop_cols <- c('Intersection')
+        parks <- parks[ , !(names(parks) %in% drop_cols)]
+        parks <- st_drop_geometry(parks)
+        table$data = parks
+    })
+    
+    observeEvent(user_selection$tribal, {
+        parks = sf_ca_mhp()
+        # Check if the user has selected a tribal land
+        if(!is.null(user_selection$tribal)) {
+            # Find the mobile home parks in the selected feature
+            id_field = tribal_data_id_field[[input$tribal_boundaries_selected]]
+            selected_tribal_land <- sf_tribal_boundaries()[get(id_field, sf_tribal_boundaries()) == user_selection$tribal,]
+            parks$Intersection <- st_intersects(parks, selected_tribal_land, sparse=FALSE)
+            filtered <- parks %>%
+                dplyr::filter(Intersection == TRUE)
+            parks <- filtered
+        }
+        # Drop unneeded columns,  don't want to show these in the table
+        drop_cols <- c('Intersection')
+        parks <- parks[ , !(names(parks) %in% drop_cols)]
+        parks <- st_drop_geometry(parks)
+        table$data = parks
+    })
+    
+    # Old, can delete, don't need anymore
+    #table_data <- reactive({
+        #parks <- sf_ca_mhp()
+        # Check if the user has selected a tribal land
+        #if(!is.null(user_selection$tribal)) {
+            # Find the mobile home parks in the selected feature
+            #selected_tribal_land <- sf_tribal_boundaries()[sf_tribal_boundaries()$LARID == user_selection$tribal,]
+            #parks$Intersection <- st_intersects(parks, selected_tribal_land, sparse=FALSE)
+            #filtered <- parks %>%
+                #dplyr::filter(Intersection == TRUE)
+            # <- filtered
+        #}
+        # Drop unneeded columns, don't want to show these in the table
+        #drop_cols <- c('Intersection')
+        #parks <- parks[ , !(names(parks) %in% drop_cols)]
+        #parks <- st_drop_geometry(parks)
+        #return(parks)
+    #})
+    
+    
+    # Add click listener on tribal boundaries data; capture user input on map
+    observeEvent(input$map1_shape_click, { 
+        # Get attributes (id) of clicked feature
+        clicked <- input$map1_shape_click
+        if(!is.null(clicked$id)) {
+            # Set id to reactive value
+            user_selection$tribal = clicked$id
+        }
+    })
+    
+    # Add click listener; capture user input on chart
+    observeEvent(event_data("plotly_click", source = "chart1"), {
+        d <- event_data("plotly_click", source = "chart1")
+        if(!is.null(d$key)) {
+            user_selection$tribal = d$key
+            # Zoom to tribal boundary
+            id_field = tribal_data_id_field[[input$tribal_boundaries_selected]]
+            selected_tribal_land <- sf_tribal_boundaries()[get(id_field, sf_tribal_boundaries()) == user_selection$tribal,]
+            print(selected_tribal_land)
+        }
+    })
+
     
     ## create map ----
     output$map1 <- renderLeaflet({
@@ -168,6 +339,7 @@ server <- function(input, output, session) {
         l_map1 <- l_map1 %>% 
             addMapPane('ca_boundary', zIndex = 410) %>% 
             addMapPane("tribal_boundaries", zIndex = 420) %>%
+            addMapPane('ca_mh_parks', zIndex=430) %>%
             # addMapPane("303d_lines", zIndex = 430) %>% 
             # addMapPane("303d_polygons", zIndex = 440) %>% 
             # addMapPane("region_polygon", zIndex = 450) %>%
@@ -268,20 +440,24 @@ server <- function(input, output, session) {
         # input$regional_board # this line just here so this code block gets activated when the region is changed
         
         withProgress(message = 'Drawing Map', value = 1, style = 'notification', {
+            # Maybe convert these to app-wide reactive values? I think they are used in other functions too
+            field_id = tribal_data_id_field[[input$tribal_boundaries_selected]]
+            field_name = tribal_data_name_field[[input$tribal_boundaries_selected]]
             # add polygons
             leafletProxy('map1') %>%
                 clearGroup('Tribal Boundaries') %>%
                 addPolygons(data = sf_tribal_boundaries() %>% 
                                 st_transform(crs = geographic_crs), 
                             options = pathOptions(pane = "tribal_boundaries"),
-                            color = 'black', # "#444444",
+                            layerId = ~get(field_id),
+                            color = '#947036',
                             weight = 2.0,
                             smoothFactor = 1.0,
-                            opacity = 1.0,
-                            fill = FALSE,
-                            # fillOpacity = 0.5,
-                            # fillColor = 'lightblue',
-                            highlightOptions = highlightOptions(color = "white", weight = 2),
+                            opacity = 0.9,
+                            fill = TRUE,
+                            fillOpacity = 0.5,
+                            fillColor = '#947036',
+                            highlightOptions = highlightOptions(color = "#00FFFF", weight = 2),
                             # popup = ~paste0('<b>', '<u>', 'Wastewater Treatment Facility / Collection System', '</u>','</b>','<br/>',
                             #                 # '<b>', '<u>', 'Site Information:', '</u>', '</b>','<br/>',
                             #                 '<b>', 'Facility Name: ', '</b>', facility_name,'<br/>',
@@ -304,9 +480,56 @@ server <- function(input, output, session) {
                             #                 # '<b>', 'Location Confidence: ', '</b>', confidence, '<br/>'
                             # ),
                             group = 'Tribal Boundaries',
-                            label = ~glue('Tribal Boundary (Name: )')
+                            label = ~get(field_name)
                 )
+            # Add mobile home parks
+            leafletProxy('map1') %>%
+            clearGroup('CA MHP') %>%
+            addCircleMarkers(data = sf_ca_mhp() %>%
+                             st_transform(crs = geographic_crs), # have to convert to geographic coordinate system for leaflet
+                             options = pathOptions(pane = "ca_mh_parks"),
+                             stroke= FALSE, 
+                             color = '#f49952',
+                             fill = TRUE,
+                             fillColor = '#f49952',
+                             fillOpacity = 1,
+                             radius = 3.5,
+                             popup = ~paste0('<b>', '<span style="color:#f49952">Mobile Home Park</span>', '</b>','<br/>',
+                                             '<b>', 'Name: ', '</b>', ParkName, '<br/>',
+                                             '<b>', 'Address: ', '</b>', ParkAddres, '</br>',
+                                             '<b>', 'County: ', '</b>', County, '</br>',
+                                             '<b>', 'Operated by: ', '</b>', OperatedBy, '<br/>'
+                             ),
+                             group = 'CA MHP',
+                             label = ~paste0(ParkName)
+            )
             
+            # Add bar chart showing tribal lands with mh park counts
+            output$barplot1 <-renderPlotly({
+                if(!is.null(sf_tribal_boundaries())) {
+                    name_field <- sym(tribal_data_name_field[[input$tribal_boundaries_selected]])
+                    id_field <-sym(tribal_data_id_field[[input$tribal_boundaries_selected]])
+                    p <- ggplot(data=chart_data(), aes(x=reorder(!!name_field, Count), y=Count, key=!!id_field))  +
+                        geom_bar(stat='identity', fill='#f49952') +
+                        labs(x = "Year", y = name_field) +
+                        coord_flip() +
+                        theme(legend.position = 'none',
+                              panel.grid.major.x = element_line(color = '#e3e3e3'),
+                              panel.grid.major.y = element_blank(),
+                              axis.title = element_blank(),
+                              axis.ticks = element_blank(),
+                              panel.background = element_rect(fill = 'transparent', color = 'transparent'),
+                              plot.background = element_rect(fill = 'transparent', color = 'transparent')
+                        )
+                    #theme(plot.title = element_text(hjust = 0.5))
+                    ggplotly(p, tooltip = c("y"), source = 'chart1')
+                }
+            })
+                    
+            # Add table
+            output$table1 <- DT::renderDataTable({
+                dataset <- table$data
+            }, options = list(scrollX=TRUE, scrollCollapse=TRUE))
         })
     })
     
