@@ -2,10 +2,12 @@
 title: "Tribal Drinking Water - Data Exploration and Processing"
 output: 
   html_document:
-    toc: true # table of contents true
-    toc_depth: 3  # upto three depths of headings (specified by #, ## and ###)
-    number_sections: true  ## if you want number sections at each table header
-    theme: united 
+    toc: true # include table of contents
+    toc_depth: 3  # depth of headings in TOC (headings specified by #, ##, ###, ...)
+    number_sections: true  # if you want number sections at each table header
+    # theme: united 
+    keep_html: true # needed to keep the html file, since the output will produce a md file formatted for github 
+always_allow_html: true
 ---
 
 ```{r setup, include=FALSE}
@@ -29,24 +31,11 @@ crs_projected <- 3310 # see: https://epsg.io/3310
 ```
 
 
+# State Boundary
 
-# Tribal Boundaries
+Get California boundary:
 
-Data on boundaries for tribal areas within California is available from multiple sources (we need to determine which, if any, is the 'official' dataset to use for SWRCB projects). Here are some potential sources:
-
-1.   Census Bureau's American Indian / Alaska Native / Native Hawaiian Areas shapefile (can be accessed via the `tigris` R package)
-2.   Governor's Office of Emergency Services GIS Data Hub | Indian Lands and Native Entities (may be the same as above): https://gis-calema.opendata.arcgis.com/datasets/23348a6fb3e44322a0c0a862aba62a24_0/explore?location=37.186500%2C-120.308500%2C5.85
-3.   USA Native Lands (Water Board's Authoritative Source?): <https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services/USA_Native_Lands_View/FeatureServer/0>
-4.   Map depicting the boundaries of Native American reservations and rancherias as mapped by the Bureau of Indian Affairs, created for the Governor's Office of the Tribal Advisor by the California Technology Agency/GIS Unit: https://services.gis.ca.gov/arcgis/rest/services/Government/NativeLandsBoundaries/MapServer 
-5.   Bureau of Indian Affairs: <https://biamaps.doi.gov/bogs/datadownload.html>
-
-
-## Census Bureau Data
-All analysis/processing below uses the boundaries from the US Census Bureau.
-
-Here's the Census Bureau's description of this dataset: "This shapefile contain both legal and statistical American Indian, Alaska Native, and Native Hawaiian entities for which the Census Bureau publishes data. The legal entities consist of federally recognized American Indian reservations and off-reservation trust land areas, state-recognized American Indian reservations, and Hawaiian home lands (HHLs)." [More Info](https://www2.census.gov/geo/pdfs/reference/GARM/Ch5GARM.pdf)
-
-```{r tribal-boundaries-census, message=FALSE}
+```{r state-boundary}
 # get state boundary ----
 ## source
 # states(year = 2020, progress_bar = FALSE) %>% 
@@ -55,26 +44,56 @@ Here's the Census Bureau's description of this dataset: "This shapefile contain 
 #     st_write(here('data_processed', 'ca_boundary.gpkg'))
 
 ## read
-sf_california <- st_read(here('data_processed', 'ca_boundary.gpkg'))
+sf_california <- st_read(here('data_processed', 'ca_boundary.gpkg'), 
+                         quiet = TRUE)
+```
 
 
-# get tribal data (all of US) ----
+# Tribal Boundaries
+
+Tribal boundary datasets for California are available from multiple sources, many of which differ somewhat in terms of the spatial representation of the boundaries and/or the attribute data they contain. Here are some potential sources:
+
+- U.S. Census Bureau's American Indian / Alaska Native / Native Hawaiian Areas: can be accessed via the `tigris` R package (`tigris::native_areas()`), or accessed manually at (I think this is the same, but not entirely certain) <https://www.census.gov/cgi-bin/geo/shapefiles/index.php?year=2020&layergroup=American+Indian+Area+Geography>
+- Bureau of Indian Affairs Land Area Representations (LAR):  <https://biamaps.doi.gov/bogs/datadownload.html>
+- CA Governor's Office of Emergency Services GIS Data Hub | Indian Lands and Native Entities: <https://gis-calema.opendata.arcgis.com/datasets/23348a6fb3e44322a0c0a862aba62a24_0/explore?location=37.186500%2C-120.308500%2C5.85>
+- USA Native Lands: <https://services.arcgis.com/P3ePLMYs2RVChkJx/ArcGIS/rest/services/USA_Native_Lands_View/FeatureServer/0>
+- Map depicting the boundaries of Native American reservations and rancherias as mapped by the Bureau of Indian Affairs, created for the Governor's Office of the Tribal Advisor by the California Technology Agency/GIS Unit: <https://services.gis.ca.gov/arcgis/rest/services/Government/NativeLandsBoundaries/MapServer>
+
+The datasets used in the Shiny App are further described below.
+
+## Census Bureau Data
+
+All analysis/processing below uses the boundaries from the US Census Bureau.
+
+We used the `tigris` R package to acccess this dataset (with the function `tigris::native_areas()`). It is also available at [this link](https://www.census.gov/cgi-bin/geo/shapefiles/index.php?year=2020&layergroup=American+Indian+Area+Geography) (**NOTE:** I think that's the same as the dataset available via the tigris R package, but not entirely sure that it's exactly the same).
+
+Here's the Census Bureau's description of this dataset: "This shapefile contain both legal and statistical American Indian, Alaska Native, and Native Hawaiian entities for which the Census Bureau publishes data. The legal entities consist of federally recognized American Indian reservations and off-reservation trust land areas, state-recognized American Indian reservations, and Hawaiian home lands (HHLs)." 
+
+More Info can be found [here](https://www2.census.gov/geo/pdfs/reference/GARM/Ch5GARM.pdf).
+
+```{r tribal-boundaries-census-download, message=FALSE}
+# get tribal boundaries and filter for areas in CA ----
 ## source
 # native_areas(cb = TRUE, year = 2020, progress_bar = FALSE) %>%
 #     st_transform(crs_projected) %>%
 #     st_filter(sf_california) %>% 
 #     st_write(here('data_processed', 'native_areas_census.gpkg'), 
 #              append = FALSE)
+```
 
+Here's a map of the Census boundaries:
+
+```{r tribal-boundaries-census-plot, message=FALSE}
 ## read
-sf_native_areas_census <- st_read(here('data_processed', 'native_areas_census.gpkg'))
+sf_native_areas_census <- st_read(here('data_processed', 'native_areas_census.gpkg'), 
+                                  quiet = TRUE)
 # View(sf_native_areas_census %>% st_drop_geometry())
 
 
 # map ----
 # ca_boundary <- map_data('state') %>% 
 #     filter(region == 'california')
-gg <- ggplot() + 
+plot_boundary_census <- ggplot() + 
     # geom_polygon(data = ca_boundary, 
     #              mapping = aes(x = long, y = lat, group = group), 
     #              fill = NA, color = 'black') +
@@ -85,8 +104,11 @@ gg <- ggplot() +
     # coord_sf(xlim=c(-124.409591, -114.131211),
     #          ylim=c(32.534156, 42.009518)) +
     NULL
-gg
+plot_boundary_census
+```
 
+```{r tribal-boundaries-census-shapefile, message=FALSE}
+# # process to write the data to a shapefile, if needed
 # # write to shapefile
 # suppressWarnings(
 #     st_write(sf_native_areas_census, 
@@ -102,7 +124,9 @@ gg
 # )
 ```
 
-```{r}
+This table shows the attribute data contained in the Census dataset:
+
+```{r tribal-boundaries-census-attribute}
 sf_native_areas_census %>%
     st_drop_geometry() %>% 
     kbl() %>%
@@ -114,11 +138,15 @@ sf_native_areas_census %>%
 
 ## BIA Data
 
-<https://biamaps.doi.gov/bogs/datadownload.html>
+The U.S. Department of the Interior, Bureau of Indian Affairs' (BIA) Land Area Representations (LAR) dataset is available for download at [this link](https://biamaps.doi.gov/bogs/datadownload.html#H2T2). The data displayed in this tool comes from a copy of the dataset we downloaded in February 2022. 
 
-NOTE: when we originally accessed the BIA tribal boundaries dataset in Feburuary 2022, the dataset was available to download as a shapefile, which is reflected in the code chunk below. However, as of September 2022, it appears that the data is only available via a REST service, so the code in the chunk below will likely no longer work to download the data, and this version of the dataset is no longer used in the shiny app. See the code chunk that follows it for an example of how to access the data via the REST service, which is how the data was obtained for use in the shiny app.
+The BIA's description of the dataset states (in part): "The purpose of the American Indian and Alaska Native Land Area Representation (AIAN-LAR) Geographic Information System (GIS) dataset is to depict the external extent of Federal Indian reservations and the external extent of associated land "held in trust” by the United States, “restricted fee” or “mixed ownership” status for Federally recognized tribes and individual Native Americans. This dataset includes other land area types such as Public Domain Allotments, Dependent Indian Communities and Homesteads." 
 
-```{r}
+More information can be found from the BIA [here](https://biamaps.doi.gov/bogs/datadownload.html#H2T2).
+
+**NOTE:** when we originally accessed the BIA tribal boundaries dataset in Feburuary 2022, the dataset was available to download as a shapefile, which is reflected in the code chunk below. However, as of September 2022, it appears that the data is only available via a REST service, so the code in the chunk below will likely no longer work to download the data, and this version of the dataset is no longer used in the shiny app. See the code chunk that follows it for an example of how to access the data via the REST service, which is how the data was obtained for use in the shiny app.
+
+```{r tribal-boundaries-bia-download-shapefile}
 # # get data as shapefile (February 2022) ----
 # ## download
 # download.file(url = 'https://biamaps.doi.gov/files/BIA_National_LAR_shp.zip', 
@@ -149,7 +177,7 @@ NOTE: when we originally accessed the BIA tribal boundaries dataset in Feburuary
 
 The code chunk below shows how to access the BIA boundary dataset via the REST service. This version of the dataset is used in the shiny app.
 
-```{r}
+```{r tribal-boundaries-bia-download-rest}
 # uncomment the code below to download and process the dataset
 # sf_tribal_bia <- esri2sf(
 #     url = 'https://biamaps.doi.gov/server/rest/services/DivLTR/BIA_AIAN_National_LAR/MapServer/0', 
@@ -167,25 +195,30 @@ The code chunk below shows how to access the BIA boundary dataset via the REST s
 
 As a check, here's a plot of the BIA tribal boundaries in California.
 
-```{r}
+```{r tribal-boundaries-bia-plot}
 # read
 sf_tribal_bia <- st_read(here('data_processed', 'native_areas_bia.gpkg'), 
                          quiet = TRUE)
 # View(sf_tribal_bia %>% st_drop_geometry())
 
-plot(sf_tribal_bia$geom) + plot(sf_california$geom, add = TRUE)
+plot_boundary_bia <- plot(sf_tribal_bia$geom) + 
+    plot(sf_california$geom, add = TRUE)
 ```
 
 
 # Mobile Home Data
 
-Potential data sources:
+We found two potential sources of data for mobile home parks in California, which are described below (there may be additional sources we haven't found yet though).
 
--   A list of mobile home / RV parks in California is available from the California Department of Housing and Community Development, at: <https://casas.hcd.ca.gov/casas/cmirMp/onlineQuery> (NOTE: this data has to be downloaded manually, because it requires entering a security code to view, and no direct link to the data download is available. To download the data, leave all criteria fields blank and click the "Export to Excel" button.)
--   A national-level shapefile of Mobile Home Parks is available at: <https://hifld-geoplatform.opendata.arcgis.com/datasets/geoplatform::mobile-home-parks/about> (click the 'Download' button then select 'Shapefile'). I think this is developed by the Department of Homeland Security.
+## CA Dept of Housing (Tabular Data Only)
 
-## Tabular Data (CA Dept of Housing)
-```{r mobile-homes-tabular}
+A list of mobile home / RV parks in California is available from the California Department of Housing and Community Development, at: <https://casas.hcd.ca.gov/casas/cmirMp/onlineQuery>. This is the dataset used in the Shiny App.
+
+This data has to be downloaded manually, because it requires entering a security code to view, and no direct link to the data download is available. To download the data, leave all criteria fields blank and click the "Export to Excel" button.
+
+Note that this data only contains addresses, not geospatial coordinates. So, to map the mobile home parks, we used a tool developed by the State Water Board's GIS Unit (Geocoding Toolbox v.1.0 for ArcGIS Pro) to convert addresses to geographic coordinates. As a result, the locations displayed in the Shiny App are estimates, and may not necessarily be accurate. The geocoding tool uses the Bing geocoding service. Water Board staff can access the tool on our intranet site [here](http://wiki.waterboards.ca.gov/gis/doku.php#geocoding_toolbox).
+
+```{r mobile-homes-ca}
 # tabular data (from CA Dept of Housing)
 df_mobilehome <- read_excel(here('data', 'cmir-mp-park-query-2022_02_14.xls'))
 # glimpse(df_mobilehome)
@@ -199,10 +232,16 @@ df_mobilehome %>%
 
 There are *`r nrow(df_mobilehome)`* total mobile home parks in the CA Dept of Housing database.
 
-## Geospatial Data (DHS)
-```{r mobile-homes-shape}
+## Department of Homeland Security (Geospatial Data)
+
+A nationalwide dataset of mobile home parks is available from the Department of Homeland Security's  Homeland Infrastructure Foundation Level Data (HIFLD) database. It is available at: <https://hifld-geoplatform.opendata.arcgis.com/datasets/geoplatform::mobile-home-parks/about> (click the 'Download' button then select 'Shapefile'). 
+
+This dataset appears to include data from the CA Dept of Housing dataset mentioned above, and it appears that some validation was done (e.g., using aerial imagery). However, the data for California may not be up to date. Also, this dataset is not that well documented, so we don't know how authoritative it is. As a result, we did not use this dataset in the Shiny App (we used the data from the CA Department Housing described above instead).
+
+```{r mobile-homes-dhs}
 # shapefile
-sf_mobile_home <- st_read(here('data', 'Mobile_Home_Parks', 'MobileHomeParks.shp')) %>% 
+sf_mobile_home <- st_read(here('data', 'Mobile_Home_Parks', 'MobileHomeParks.shp'), 
+                          quiet = TRUE) %>% 
     filter(STATE == 'CA') %>% 
     # filter(TYPE == 'MOBILE HOME PARK') %>% 
     st_transform(crs_projected)
@@ -218,7 +257,7 @@ sf_mobile_home <- sf_mobile_home %>%
 #     filter(TYPE == 'MOBILE HOME PARK')
 
 # plot
-plot(sf_california$geom) + 
+plot_mhp_dhs <- plot(sf_california$geom) + 
     plot(sf_native_areas_census$geom, col = 'black', add = TRUE) + 
     plot(sf_mobile_home$geometry, col = 'green', add = TRUE)
 
@@ -232,8 +271,8 @@ plot(sf_california$geom) +
 
 There are *`r nrow_mobhome_dhs`* total California mobile home parks in the DHS database, and *`r nrow(sf_mobile_home)`* are within the tribal boundaries.
 
-Tabular data (mobile home parks within CA tribal boundaries):
-```{r}
+Tabular data (DHS mobile home parks within CA tribal boundaries):
+```{r mobile-homes-dhs-tabular}
 sf_mobile_home %>%
     st_drop_geometry() %>% 
     kbl() %>%
@@ -246,57 +285,74 @@ sf_mobile_home %>%
 
 # Drinking Water Data
 
-Data Sources:
+The datasets listed below were some that we identified as part of our exploratory analysis; not all of them were ultimately used for analysis/app.
 
--   CA GIS data portal: <https://gis.data.ca.gov/search?groupIds=328cf900903945978695b3ff6ae95db7&type=feature%20layer%2Cfeature%20service>
--   Water Board GIS Portal (multiple - see below): <https://gispublic.waterboards.ca.gov/portal/home>
+## California Drinking Water System Area Boundaries
 
-
-## System Boundaries
-
-This dataset is not currently used in any of our analysis. It is available at:
+This dataset represents service area boundaries boundaries of drinking water service providers, as verified by the Division of Drinking Water, State Water Resources Control Board. It is available at:
 <https://gispublic.waterboards.ca.gov/portal/home/item.html?id=fbba842bf134497c9d611ad506ec48cc>
 
-```{r drinking-water-boundaries}
+This dataset is not currently used in any of our analysis.
+
+```{r drinking-water-system-boundaries}
+# # get data via REST
+# sf_dw_boundary <- esri2sf(
+#     url = 'https://gispublic.waterboards.ca.gov/portalserver/rest/services/Drinking_Water/California_Drinking_Water_System_Area_Boundaries/FeatureServer/0', 
+#     crs = NULL)
+
+# # Alternative method, downloading as GeoJSON (via REST)
 # drinking water boundaries
 # from: https://gispublic.waterboards.ca.gov/portal/home/item.html?id=fbba842bf134497c9d611ad506ec48cc
 # url_dw_boundary <- paste0('https://gispublic.waterboards.ca.gov/portalserver/rest/services/Drinking_Water/California_Drinking_Water_System_Area_Boundaries/FeatureServer/0',
 #             '/query?where=1=1&outFields=*&outSR=4326&f=geojson')
 # sf_dw_boundary <- readLines(url_dw_boundary) %>% 
 #     geojson_sf()
+
+# View tabular data
 # sf_dw_boundary %>% st_drop_geometry() %>% View()
 ```
 
 
-## System Locations
+## California Drinking Water System Locations
 
 This dataset is not currently used in any of our analysis. It is available at:
 <https://gispublic.waterboards.ca.gov/portal/home/item.html?id=346d649d1e654737ac5b6855466e89b2>
 
+This dataset is a combination of data sources, including:
+- The "California Drinking Water System Area Boundaries" dataset described above
+- Public water systems (mostly non-community) that do not yet have a boundary in the "California Drinking Water System Area Boundaries" dataset. These systems have been geocoded from their Physical Locations in the State Drinking Water Information System (SDWIS) portal, with light data cleaning.
+- State Small Water Systems (non-public water systems that are regulated by County health officials in partnership with the State Water Board). These systems have been geocoded from their Physical Locations using the most recent County-provided data, with light data cleaning.
+
 It's also on the state geoportal here: <https://gis.data.ca.gov/maps/waterboards::water-system-outreach-public/explore>
 
 ```{r drinking-water-system-locations}
-# California Drinking Water System Locations
-# from: <https://gispublic.waterboards.ca.gov/portal/home/item.html?id=346d649d1e654737ac5b6855466e89b2>
-# NOTE: Downloaded by clicking on "Open in ArcGIS Desktop" then saving the layer as a shapefile from there (could download via geojson, but would need to figure out how to work around the limit on max # of records)
-sf_dw_system_loc <- st_read(here('data', 'CA_ws_20220114_Clip', 'CA_ws_20220114_Clip.shp')) %>% 
-    st_transform(crs_projected)
-# sf_dw_system_loc %>% st_drop_geometry() %>% View()
+# # get data via REST
+# sf_dw_system_loc <- esri2sf(
+#     url = 'https://gispublic.waterboards.ca.gov/portalserver/rest/services/Hosted/California_Public_Water_System_Locations/FeatureServer/0', 
+#     crs = NULL) %>% 
+#     st_transform(crs_projected) %>% 
+#     rename(geom = geoms)
+# # fix invalid geometry
+# if (sum(!st_is_valid(sf_dw_system_loc_tribal)) > 0) {
+#     sf_dw_system_loc_tribal <- st_make_valid(sf_dw_system_loc_tribal)
+# }
+# sum(!st_is_valid(sf_dw_system_loc_tribal))
+# # write
+# st_write(sf_dw_system_loc, 
+#          here('data', 'drinking_water_system_loc.gpkg'), 
+#          append = FALSE)
+
+sf_dw_system_loc <- st_read(here('data', 'drinking_water_system_loc.gpkg'))
+
+# systems witin tribal boundaries
 sf_dw_system_loc_tribal <- sf_dw_system_loc %>% 
     st_filter(sf_native_areas_census)
 # sf_dw_system_loc_tribal %>% st_drop_geometry() %>% View()
 # sf_dw_system_loc_tribal %>% st_drop_geometry() %>% filter(system_typ == 'STATE SMALL WATER SYSTEM') %>% View()
 
-# fix invalid geometry
-if (sum(!st_is_valid(sf_dw_system_loc_tribal)) > 0) {
-    sf_dw_system_loc_tribal <- st_make_valid(sf_dw_system_loc_tribal)
-}
-# sum(!st_is_valid(sf_dw_system_loc_tribal))
-
-plot(sf_california$geom) + 
+plot_dw_systems <- plot(sf_california$geom) + 
     plot(sf_native_areas_census$geom, add = TRUE, col = 'black') + 
-    plot(sf_dw_system_loc_tribal$geometry, add = TRUE, col = 'blue')
-
+    plot(sf_dw_system_loc_tribal$geom, add = TRUE, col = 'blue')
 
 # # write to shapefile
 # suppressWarnings(
@@ -309,7 +365,7 @@ plot(sf_california$geom) +
 
 Tabular data (water systems / aquifers overlapping tribal boundaries):
 
-```{r}
+```{r drinking-water-system-locations-tabular}
 sf_dw_system_loc_tribal %>%
     st_drop_geometry() %>% 
     kbl() %>%
@@ -324,39 +380,71 @@ sf_dw_system_loc_tribal %>%
 This dataset is not currently used in any of our analysis. It is available at:
 <https://gis.data.ca.gov/datasets/waterboards::combined-risk/about>
 
-```{r }
-
+```{r drinking-water-combined-risk}
+# # get data via REST
+# # this link comes from the "View Data Source" button
+# sf_combined_risk <- esri2sf(
+#     url = 'https://services.arcgis.com/Wvy1i2QPQwOxNumH/arcgis/rest/services/Combined_Risk/FeatureServer/0', 
+#     crs = NULL) %>% 
+#     st_transform(crs_projected) %>% 
+#     rename(geom = geoms)
 ```
 
 
 ## Combined Risk By Well
 
-This dataset is not currently used in any of our analysis. See the "Water Quality Risk Final - Water Quality Risk by Well (All Contaminants)" dataset below for the version that is used in the shiny app. 
-
-This dataset is available at:
+This dataset is not currently used in any of our analysis. It is available at:
 <https://gis.data.ca.gov/datasets/waterboards::water-quality-risk-by-well-all-chemicals/about>
 
-```{r drinking-water-by-well}
-# water quality risk by well
-# <https://gis.data.ca.gov/datasets/waterboards::water-quality-risk-by-well-all-chemicals/about>
-sf_dw_domestic_well <- st_read(here('data', 'Domestic_Depth_Groundwater_Quality_(Water_Quality_Risk)', 'Domestic_Depth_Groundwater_Quality_(Water_Quality_Risk).shp')) %>% 
-    st_transform(crs_projected)
+See the "Water Quality Risk Final - Water Quality Risk by Well (All Contaminants)" dataset below for the version that is used in the shiny app. 
+
+
+```{r drinking-water-combined-risk-by-well-download}
+# # get data via REST
+# # this link comes from the "View Data Source" button
+# sf_dw_domestic_well <- esri2sf(
+#     url = 'https://services.arcgis.com/Wvy1i2QPQwOxNumH/arcgis/rest/services/Domestic_Depth_Groundwater_Quality/FeatureServer/0', 
+#     crs = NULL)
+# # transform
+# sf_dw_domestic_well <- sf_dw_domestic_well %>% 
+#     st_transform(crs_projected) %>% 
+#     rename(geom = geoms)
+# # write
+# st_write(sf_dw_domestic_well,
+#          here('data', 'combined_risk_well.gpkg'),
+#          append = FALSE)
+
+sf_dw_domestic_well <- st_read(here('data', 'combined_risk_well.gpkg'))
+
 # sf_dw_domestic_well %>% st_drop_geometry() %>% count(source)
 
 # wells on tribal land
 sf_dw_domestic_well_tribal <- sf_dw_domestic_well %>% 
     st_filter(sf_native_areas_census)
 # sf_dw_domestic_well_tribal %>% st_drop_geometry() %>% View()
+```
 
+Here's a plot of wells within tribal boundaries, by risk level (blue = low, orange = medium, red = high):
+
+```{r drinking-water-combined-risk-by-well-plot}
 # high & medium risk wells
 # sf_dw_domestic_well_tribal %>% st_drop_geometry() %>% filter(risk != 'low') %>% View()
 
 # plot
-plot(sf_california$geom) + 
+plot_wells_combined_risk <- plot(sf_california$geom) + 
     plot(sf_native_areas_census$geom, col = 'black', add = TRUE) + 
-    sf_dw_domestic_well_tribal %>% filter(risk == 'low') %>% pull(geometry) %>% plot(col = 'blue', add = TRUE) +
-    sf_dw_domestic_well_tribal %>% filter(risk == 'medium') %>% pull(geometry) %>% plot(col = 'orange', add = TRUE) +
-    sf_dw_domestic_well_tribal %>% filter(risk == 'high') %>% pull(geometry) %>% plot(col = 'red', add = TRUE)
+    plot(sf_dw_domestic_well_tribal %>% 
+             filter(risk == 'low') %>% 
+             pull(geom), 
+         col = 'blue', add = TRUE) +
+    plot(sf_dw_domestic_well_tribal %>% 
+             filter(risk == 'medium') %>% 
+             pull(geom), 
+         col = 'orange', add = TRUE) + 
+    plot(sf_dw_domestic_well_tribal %>% 
+             filter(risk == 'high') %>% 
+             pull(geom), 
+         col = 'red', add = TRUE)
 
 # # write to shapefile
 # suppressWarnings(
@@ -368,7 +456,7 @@ plot(sf_california$geom) +
 ```
 
 Tabular data (wells within tribal boundaries):
-```{r}
+```{r drinking-water-combined-risk-by-well-tabular}
 sf_dw_domestic_well_tribal %>%
     st_drop_geometry() %>% 
     kbl() %>%
@@ -377,7 +465,7 @@ sf_dw_domestic_well_tribal %>%
 ```
 
 Count of wells by risk level:
-```{r}
+```{r drinking-water-combined-risk-by-well-count}
 sf_dw_domestic_well_tribal %>% 
     st_drop_geometry() %>% 
     count(risk) %>% 
@@ -392,7 +480,7 @@ sf_dw_domestic_well_tribal %>%
 
 This dataset is not currently used in any of our analysis. It is available at: <https://data.cnra.ca.gov/dataset/647afc02-8954-426d-aabd-eff418d2652c/resource/8da7b93b-4e69-495d-9caa-335691a1896b>
 
-```{r}
+```{r drinking-water-wells-oswcr}
 # # source data
 # temp_dir <- tempdir()
 # download.file(url = 'https://data.cnra.ca.gov/dataset/647afc02-8954-426d-aabd-eff418d2652c/resource/8da7b93b-4e69-495d-9caa-335691a1896b/download/wellcompletionreports.csv', 
@@ -453,7 +541,7 @@ This dataset was used by Alexis in the shiny app (in the "Wells + SSWS" tab). Em
 The dataset is avilable at: <https://gispublic.waterboards.ca.gov/portal/home/item.html?id=84dc4363570b42aba392952d8974c8ab>
 Note that you have to then go to the "Water Quality Risk by Well (All Contaminants)" layer to get the well data.
 
-```{r}
+```{r drinking-water-quality-final-download}
 # # uncomment the code below to download and process the dataset
 # # get data
 # sf_wells_wq_risk <- esri2sf(
@@ -475,14 +563,15 @@ Note that you have to then go to the "Water Quality Risk by Well (All Contaminan
 
 As a check, here's a plot of the wells that are within the Census Bureau boundaries: 
 
-```{r}
-sf_wells_wq_risk <- st_read(here('data_processed', 'wells.gpkg')) %>% 
+```{r drinking-water-quality-final-plot}
+sf_wells_wq_risk <- st_read(here('data_processed', 'wells.gpkg'), 
+                            quiet = TRUE) %>% 
     st_transform(crs_projected)
 
 sf_wells_tribal <- sf_wells_wq_risk %>% 
     st_filter(sf_native_areas_census)
 
-plot(sf_california$geom) + 
+plot_wells_risk_final <- plot(sf_california$geom) + 
     plot(sf_wells_tribal$geom, col = 'blue', add = TRUE)
 ```
 
@@ -493,7 +582,7 @@ This dataset was used by Alexis in the shiny app (in the "Wells + SSWS" tab).
 
 The dataset is avilable at: <https://gispublic.waterboards.ca.gov/portal/home/item.html?id=2d34d39f75b8491d88adda57adb837ec&fromSearch=true&searchPosition=1&searchTerm=small%20state%20water%20systems>
 
-```{r}
+```{r drinking-water-ssws-download}
 # # uncomment the code below to download and process the dataset
 # # get data
 # sf_ssws <- esri2sf(
@@ -517,16 +606,17 @@ The dataset is avilable at: <https://gispublic.waterboards.ca.gov/portal/home/it
 #          append = FALSE)
 ```
 
-As a check, here's a plot of the wells that are within the Census Bureau boundaries: 
+As a check, here's a plot of the systems that are within the Census Bureau boundaries: 
 
-```{r}
+```{r drinking-water-ssws-plot}
 sf_ssws <- st_read(here('data_processed', 
-                        'SSWS.gpkg')) %>% 
+                        'SSWS.gpkg'), 
+                   quiet = TRUE) %>% 
     st_transform(crs_projected)
 
 sf_ssws_tribal <- sf_ssws %>% 
     st_filter(sf_native_areas_census)
 
-plot(sf_california$geom) + 
+plot_ssws <- plot(sf_california$geom) + 
     plot(sf_ssws_tribal$geom, col = 'blue', add = TRUE)
 ```
