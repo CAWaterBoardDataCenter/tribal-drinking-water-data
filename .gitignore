@@ -8,3 +8,4 @@ rsconnect/
 data/
 email/
 data_processed/shapefiles/
+ignore/
