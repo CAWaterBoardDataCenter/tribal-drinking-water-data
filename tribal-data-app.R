@@ -186,7 +186,89 @@ ui <- tagList(
                tabPanel('Background Information', 
                         icon = icon('info-circle'), # icon = icon('book-reader')
                         fluidRow(
-                            
+                            p('This tool is intended to compile and display information that can inform and help prioritize outreach related to drinking water issues in tribal areas within California. It is a work in progress, and is not intended to be a comprehensive source of tribal-related water data.'),
+                            h2('Source Code / Documentation'),
+                            p('Source code for this tool, as well as additional documention we\'re developing, is available on GitHub at ',
+                              a(strong('this repository')),
+                              ' (note that the repository is currently restricted to members of the "CAWaterboardDataCenter" GitHub Organization).'),
+                            h2('Data Sources'),
+                            p('The processes we used to access and transform the datasets described below are documented in the ', 
+                              strong('tribal-data-exploration.RMD'), 
+                              ' file, which is avilable on GitHub at ', 
+                              a(strong('this link'), href = 'https://github.com/CAWaterBoardDataCenter/tribal-drinking-water-data/blob/main/tribal-data-exploration.RMD'),
+                              '.'
+                            ),
+                            h3('1. Tribal Boundaries'),
+                            p('Tribal boundary datasets for California are available from multiple sources, many of which differ somewhat in terms of the spatial representation of the boundaries and/or the attribute data they contain. Currently this tool includes tribal boundary datasets from the sources described below.'),
+                            h4('1.1. U.S. Census Bureau'),
+                            p('The U.S. Census Bureau\'s American Indian / Alaska Native / Native Hawaiian Areas dataset is available at ',
+                              a(strong('this link'), href = 'https://www.census.gov/cgi-bin/geo/shapefiles/index.php?year=2020&layergroup=American+Indian+Area+Geography'),
+                              '. We used the ',
+                              strong('tigris'),
+                              ' R package to acccess this dataset (with the function ', 
+                              code('tigris::native_areas()'),
+                              '). The data displayed in this tool comes from a copy of the 2020 version of this dataset, which we downloaded in February 2022.'
+                            ),
+                            p('The Census Bureau\'s description of this dataset states that the dataset: ',
+                              em('"contains both legal and statistical American Indian, Alaska Native, and Native Hawaiian entities for which the Census Bureau publishes data. The legal entities consist of federally recognized American Indian reservations and off-reservation trust land areas, state-recognized American Indian reservations, and Hawaiian home lands (HHLs)."')
+                            ),
+                            p('More information can be found from the Census Bureau at ',
+                              a(strong('this link'), href = 'https://www2.census.gov/geo/pdfs/reference/GARM/Ch5GARM.pdf'),
+                              '.'),
+                            h4('1.2. Bureau of Indian Affairs'),
+                            p('The U.S. Department of the Interior, Bureau of Indian Affairs\' (BIA) Land Area Representations (LAR) dataset is available for download at ',
+                              a('this link', href = 'https://biamaps.doi.gov/bogs/datadownload.html#H2T2).'), 
+                              '. The data displayed in this tool comes from a copy of the dataset we downloaded in September 2022.'
+                            ),
+                            p('The BIA\'s description of the dataset states (in part): ',
+                              em('"The purpose of the American Indian and Alaska Native Land Area Representation (AIAN-LAR) Geographic Information System (GIS) dataset is to depict the external extent of Federal Indian reservations and the external extent of associated land "held in trust” by the United States, “restricted fee” or “mixed ownership” status for Federally recognized tribes and individual Native Americans. This dataset includes other land area types such as Public Domain Allotments, Dependent Indian Communities and Homesteads."') 
+                            ),
+                            p('More information can be found from the BIA at ',
+                              a(strong('this link'), href = 'https://biamaps.doi.gov/bogs/datadownload.html#H2T2'),
+                              '.'),
+                            h3('2. Mobile Home Parks'),
+                            p('Mobile home park information displayed in the ',
+                              strong('MHPs'), 
+                              'tab was obtained from the California Department of Housing and Community Development, at ',
+                              a(strong('this link'), href = 'https://casas.hcd.ca.gov/casas/cmirMp/onlineQuery'),
+                              '. The data displayed in this tool was manually downloaded on February 22, 2022 (this data has to be downloaded manually, because it requires entering a security code to view, and no direct link to the data download is available. To download the data, leave all criteria fields blank and click the "Export to Excel" button).'
+                            ),
+                            p('To map the mobile home parks, we used a tool developed by the State Water Board\'s GIS Unit (called ',
+                              em('Geocoding Toolbox v.1.0 for ArcGIS Pro'), 
+                              ') to convert addresses to geographic coordinates. As a result, the locations displayed are estimates, and may not always be highly accurate. The geocoding tool uses the Bing geocoding service. Water Board staff can access the tool on our intranet site at ',
+                              a(strong('this link'), href = 'http://wiki.waterboards.ca.gov/gis/doku.php#geocoding_toolbox'),
+                              '.'),
+                            h3('3. Drinking Water Information'),
+                            h4('3.1. Drinking Water Wells'),
+                            p('The well data displated in the ',
+                              strong('Wells + SSWS'),
+                              'tab comes from the State Water Board\'s ',
+                              strong('Water Quality Risk Final'), 
+                              ' dataset, which is available at ',
+                              a(strong('this link'), href = 'https://gispublic.waterboards.ca.gov/portal/home/item.html?id=84dc4363570b42aba392952d8974c8ab'),
+                              '. Specifically, we used the ',
+                              strong('Water Quality Risk by Well (All Contaminants)'), 
+                              ' point layer (available at ',
+                              a(strong('this link'), href = 'https://gispublic.waterboards.ca.gov/portal/home/item.html?id=84dc4363570b42aba392952d8974c8ab&sublayer=0'), 
+                              '). The data displayed in this tool is from a copy of the dataset that we accessed on September 9, 2022.'
+                            ),
+                            p('The dataset description states (in part): ',
+                              em('"The aquifer risk map is being developed to fulfill requirements of SB-200 and is intended to help prioritize areas where domestic wells and state small water systems may be accessing groundwater that does not meet primary drinking water standards (maximum contaminant level or MCL)... The water quality risk is based on depth-filtered, de-clustered water quality results from public and domestic supply wells for all contaminants with an MCL (plus hexavalent chromium). The methodology used to determine water quality risk is outlined ', 
+                                 a(strong('here'), href = 'https://gispublic.waterboards.ca.gov/portal/home/item.html?id=62b116bb7e824df098b871cbce73ce3b'),
+                                 '."')
+                            ),
+                            h4('3.2. State Small Water Systems'),
+                            p('The State Small Water System data displated in the ',
+                              strong('Wells + SSWS'), 
+                              ' tab comes from the State Water Board\'s ',
+                              strong('State Small Water Systems DDW'),
+                              ' dataset, which is available at ',
+                              a(strong('this link'), href = 'https://gispublic.waterboards.ca.gov/portal/home/item.html?id=2d34d39f75b8491d88adda57adb837ec&fromSearch=true&searchPosition=1&searchTerm=small%20state%20water%20systems'), 
+                              '. The data displayed in this tool is from a copy of the dataset that we accessed on September 9, 2022.'
+                            ),
+                            p('The dataset description states (in part): ',
+                              em('"Layer includes geocoded point locations and Administrative contact information for state smalls, collected by the Needs Analysis Unit as of 9/22/21. This information was collected as part of SB200 requirements for counties to submit state small water system location information. This layer also includes water quality risk estimates from the 2022 Aquifer Risk Map. The risk estimates are not based on samples collected directly from each state small water system, but reflect the average water quality of the raw source groundwater nearby."')
+                            )
                         )
                ) # end of tabPanel (for Info)
     )
