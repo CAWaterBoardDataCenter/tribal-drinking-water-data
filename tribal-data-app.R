@@ -238,6 +238,8 @@ ui <- tagList(
                               ') to convert addresses to geographic coordinates. As a result, the locations displayed are estimates, and may not always be highly accurate. The geocoding tool uses the Bing geocoding service. Water Board staff can access the tool on our intranet site at ',
                               a(strong('this link'), href = 'http://wiki.waterboards.ca.gov/gis/doku.php#geocoding_toolbox'),
                               '.'),
+                            p('Prior to using the geocoding tool, we processed the data and manually verified (using Google Maps) a selection of mobile home park addresses that appeared to be entered or recorded incorrectly. We updated the addresses of four parks and removed one park that did not have a valid or verifiable address. These steps are documented in a Python script on GitHub at ', 
+                              a(strong('this link'), href = 'https://github.com/CAWaterBoardDataCenter/tribal-drinking-water-data/blob/main/working_files/mobile_home_parks/mobile-home-parks.py'), '.'),
                             h3('3. Drinking Water Information'),
                             h4('3.1. Drinking Water Wells'),
                             p('The well data displated in the ',

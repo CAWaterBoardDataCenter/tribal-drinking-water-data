@@ -1,3 +1,8 @@
+'''
+This script processes mobile home parks data downloaded from the California Department of Housing and Community Development website (https://casas.hcd.ca.gov/casas/cmirMp/onlineQuery). We use the output of this script in a geocoding tool to convert the mobile home park addresses to geographic coordinates. 
+'''
+
+
 import pandas as pd
 
 def get_full_address(str):
@@ -48,11 +53,11 @@ mhp_dtypes = {
 }
 
 if __name__ == '__main__':
-    # Import data
+    # Import data downloaded from the California Department of Housing and Community Development website (https://casas.hcd.ca.gov/casas/cmirMp/onlineQuery)
     file = 'cmir-mp-park-query-2022_02_22.xls'
     df = pd.read_excel(file, dtype=mhp_dtypes)
 
-    # Rename columns
+    # Rename columns to remove spaces and other characters
     df = df.rename(columns={
         'Park Name': 'ParkName',
         'Park Identifier': 'ParkIdentifier',
@@ -64,20 +69,20 @@ if __name__ == '__main__':
         'Operated by': 'OperatedBy'
     })
     
-    # Create new column and copy address (without phone number over to new column)
+    # Create a new column and copy over the address (without phone number) to the new column
     df['FullAddress'] = df['ParkAddress'].apply(lambda x: get_full_address(x))
 
-    # Manually set some addresses for mobile home parks that are otherwise geocoded incorrectly
+    # Manually set some addresses for mobile home parks that appear to be entered/recorded incorrectly
     # These addresses were manually verified using Google Maps 3/8/22
     df.loc[df['ParkIdentifier'] == '14-0001-MP', 'FullAddress'] = '150 Tinemaha Rd #106, Independence, CA 93526'.upper() # Aberdeen Resort in Inyo County, original address looks like a PO box or similar
     df.loc[df['ParkIdentifier'] == '33-0486-MP', 'FullAddress'] = '47340 Jefferson St, Indio, CA 92201'.upper() # Indian Wells RV Resort, original address was entered or transcribed incorrectly with a space between address numbers
     df.loc[df['ParkIdentifier'] == '33-0561-MP', 'FullAddress'] = '51374 Tyler St, Coachella, CA 92236'.upper() # Palmera Estates MHP/Las Palmeras Housing Associates. Original address was entered or transcribed incorrectly with a space between address numbers
     df.loc[df['ParkIdentifier'] == '37-0231-MP', 'FullAddress'] = '11670 Sunrise Hwy, Mt Laguna, CA 91948'.upper() # Al Bahr Shrine Camp. Original address was a description, not an actual address
     
-    # Delete this record . I cannot verify the park or the address. There is another King Island park in the dataset, but it is in Stockton, not Byron. I think that one is the correct address. Department of Homeland Security data does NOT have this park.
+    # Remove this record . I cannot verify the park or the address. There is another King Island park in the dataset, but it is in Stockton, not Byron. I think that one is the correct address. The Department of Homeland Security dataset does NOT have this park.
     df.drop(df[df['ParkIdentifier'] == '39-0189-MP'].index, inplace=True)
 
-    # Break up the address field into individual elements
+    # Break up the address field into individual elements. The geocoding tool accepts either a single column with the full address or you can specify the individual columns (if available) for address, city, zip, etc. Separating out the address elements might be better in case there are any parsing issues, but both ways seem to work okay
     df['Address'] = df['FullAddress'].apply(lambda x: get_address(x))
     df['City'] = df['FullAddress'].apply(lambda x: get_city(x))
     df['State'] = df['FullAddress'].apply(lambda x: get_state(x))
