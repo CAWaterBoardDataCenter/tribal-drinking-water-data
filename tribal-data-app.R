@@ -1,5 +1,8 @@
 # tribal data app
 
+## Note: To publish the app to shinyapps.io, you only need to upload this file 
+## and the data_processed folder; no other files are needed for deploying the app
+
 
 # 1 - load packages -----------------------------------------------------------
 library(shiny)

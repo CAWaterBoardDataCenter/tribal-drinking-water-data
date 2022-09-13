@@ -15,7 +15,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(tigris)
-library(ggplot2)
 library(ggthemes)
 library(sf)
 library(here)
@@ -138,7 +137,7 @@ sf_native_areas_census %>%
 
 ## BIA Data
 
-The U.S. Department of the Interior, Bureau of Indian Affairs' (BIA) Land Area Representations (LAR) dataset is available for download at [this link](https://biamaps.doi.gov/bogs/datadownload.html#H2T2). The data displayed in this tool comes from a copy of the dataset we downloaded in February 2022. 
+The U.S. Department of the Interior, Bureau of Indian Affairs' (BIA) Land Area Representations (LAR) dataset is available for download at [this link](https://biamaps.doi.gov/bogs/datadownload.html#H2T2). The data displayed in this tool comes from a copy of the dataset we downloaded in September 2022. 
 
 The BIA's description of the dataset states (in part): "The purpose of the American Indian and Alaska Native Land Area Representation (AIAN-LAR) Geographic Information System (GIS) dataset is to depict the external extent of Federal Indian reservations and the external extent of associated land "held in trust” by the United States, “restricted fee” or “mixed ownership” status for Federally recognized tribes and individual Native Americans. This dataset includes other land area types such as Public Domain Allotments, Dependent Indian Communities and Homesteads." 
 
