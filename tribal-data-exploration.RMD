@@ -60,9 +60,9 @@ Tribal boundary datasets for California are available from multiple sources, man
 
 The datasets used in the Shiny App are further described below.
 
-## Census Bureau Data
+## U.S. Census Bureau
 
-All analysis/processing below uses the boundaries from the US Census Bureau.
+All analysis/processing below uses the boundaries from the U.S. Census Bureau.
 
 We used the `tigris` R package to acccess this dataset (with the function `tigris::native_areas()`). It is also available at [this link](https://www.census.gov/cgi-bin/geo/shapefiles/index.php?year=2020&layergroup=American+Indian+Area+Geography) (**NOTE:** I think that's the same as the dataset available via the tigris R package, but not entirely sure that it's exactly the same).
 
@@ -135,7 +135,7 @@ sf_native_areas_census %>%
 ```
 
 
-## BIA Data
+## Bureau of Indian Affairs
 
 The U.S. Department of the Interior, Bureau of Indian Affairs' (BIA) Land Area Representations (LAR) dataset is available for download at [this link](https://biamaps.doi.gov/bogs/datadownload.html#H2T2). The data displayed in this tool comes from a copy of the dataset we downloaded in September 2022. 
 
@@ -215,21 +215,25 @@ A list of mobile home / RV parks in California is available from the California 
 
 This data has to be downloaded manually, because it requires entering a security code to view, and no direct link to the data download is available. To download the data, leave all criteria fields blank and click the "Export to Excel" button.
 
-Note that this data only contains addresses, not geospatial coordinates. So, to map the mobile home parks, we used a tool developed by the State Water Board's GIS Unit (Geocoding Toolbox v.1.0 for ArcGIS Pro) to convert addresses to geographic coordinates. As a result, the locations displayed in the Shiny App are estimates, and may not necessarily be accurate. The geocoding tool uses the Bing geocoding service. Water Board staff can access the tool on our intranet site [here](http://wiki.waterboards.ca.gov/gis/doku.php#geocoding_toolbox).
+Note that this data only contains addresses, not geospatial coordinates. So, to map the mobile home parks, we used a tool developed by the State Water Board's GIS Unit (Geocoding Toolbox v.1.0 for ArcGIS Pro) to convert addresses to geographic coordinates. As a result, the locations displayed in the Shiny App are estimates, and may not always be highly accurate. The geocoding tool uses the Bing geocoding service. Water Board staff can access the tool on our intranet site [here](http://wiki.waterboards.ca.gov/gis/doku.php#geocoding_toolbox).
+
+Prior to using the geocoding tool, we processed the data and manually verified (using Google Maps) a selection of mobile home park addresses that appeared to be entered or recorded incorrectly. We updated the addresses of four parks and removed one park that did not have a valid or verifiable address. These steps are documented in the Python script `working_files/mobile_home_parks/mobile-home-parks.py` (also available [here](https://github.com/CAWaterBoardDataCenter/tribal-drinking-water-data/blob/main/working_files/mobile_home_parks/mobile-home-parks.py)). 
 
 ```{r mobile-homes-ca}
 # tabular data (from CA Dept of Housing)
 df_mobilehome <- read_excel(here('data', 'cmir-mp-park-query-2022_02_14.xls'))
 # glimpse(df_mobilehome)
+```
 
+There are *`r nrow(df_mobilehome)`* total mobile home parks in the CA Dept of Housing database. The table below shows the attribute data included in this dataset.
+
+```{r mobile-homes-ca-table}
 df_mobilehome %>%
     kbl() %>%
     kable_paper() %>%
     scroll_box(width = "1000px", height = "200px") %>%
     {.}
 ```
-
-There are *`r nrow(df_mobilehome)`* total mobile home parks in the CA Dept of Housing database.
 
 ## Department of Homeland Security (Geospatial Data)
 
@@ -270,7 +274,8 @@ plot_mhp_dhs <- plot(sf_california$geom) +
 
 There are *`r nrow_mobhome_dhs`* total California mobile home parks in the DHS database, and *`r nrow(sf_mobile_home)`* are within the tribal boundaries.
 
-Tabular data (DHS mobile home parks within CA tribal boundaries):
+The table below shows the attribute data included in this dataset.
+
 ```{r mobile-homes-dhs-tabular}
 sf_mobile_home %>%
     st_drop_geometry() %>% 
@@ -281,10 +286,9 @@ sf_mobile_home %>%
 ```
 
 
-
 # Drinking Water Data
 
-The datasets listed below were some that we identified as part of our exploratory analysis; not all of them were ultimately used for analysis/app.
+The datasets listed below were some that we identified as part of our data gathering process; some of them were not ultimately used for our analysis/application.
 
 ## California Drinking Water System Area Boundaries
 
