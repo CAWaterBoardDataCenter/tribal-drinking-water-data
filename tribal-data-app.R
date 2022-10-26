@@ -635,9 +635,26 @@ server <- function(input, output, session) {
             })
             
             # Add table
-            output$MHPTable <- renderDT({
-                dataset <- state$MHPTable
-            }, options = list(scrollX=TRUE, scrollCollapse=TRUE))
+            output$MHPTable <- renderDT(
+                {dataset <- state$MHPTable},
+                extensions = c('Buttons', 'Scroller'),
+                options = list(scrollX = TRUE, 
+                               scrollCollapse=TRUE,
+                               dom = 'Bfrtip',
+                               buttons = list(
+                                   list(extend = 'collection',
+                                        buttons = list(list(extend='csv',
+                                                            filename = 'CA_Tribal_MobileHomeParks'),
+                                                       list(extend='excel',
+                                                            title = NULL,
+                                                            filename = 'CA_Tribal_MobileHomeParks')
+                                        ),
+                                        text = 'Download Data'),
+                                   'colvis')
+                               ),
+                server = FALSE, ## NOTE: TRUE may not allow for download of the full file
+                rownames = FALSE
+            )
         })
     })
     
@@ -850,15 +867,85 @@ server <- function(input, output, session) {
         })
         
         # well table
-        output$wellsTable <- renderDT({
-            result <- datatable(state$wellsTable, options = list(scrollX=TRUE, scrollY='300px', scrollCollapse=TRUE)) %>% 
+        # output$wellsTable <- renderDT(
+        #     {
+        #         result <- datatable(state$wellsTable, 
+        #                             extensions = c('Buttons', 'Scroller'),
+        #                             options = list(scrollX = TRUE, 
+        #                                            scrollY = '300px', 
+        #                                            scrollCollapse = TRUE,
+        #                                            dom = 'Bfrtip',
+        #                                            buttons = 
+        #                                                list(list(
+        #                                                    extend = 'collection',
+        #                                                    buttons = list(list(extend='csv',
+        #                                                                        filename = 'CA_Tribal_Wells'),
+        #                                                                   list(extend='excel',
+        #                                                                        title = NULL,
+        #                                                                        filename = 'CA_Tribal_Wells')
+        #                                                    ),
+        #                                                    text = 'Download Data'),
+        #                                                    'colvis'      
+        #                                                )
+        #                             ),
+        #                             rownames = FALSE    
+        #         ) %>% 
+        #             # add padding to each row
+        #             formatStyle(names(state$wellsTable), height=75)
+        #         return(result)
+        #     },
+        #     server = FALSE
+        # )
+        
+        output$wellsTable <- renderDT(
+            datatable(state$wellsTable,
+                      extensions = c('Buttons', 'Scroller'),
+                      options = list(scrollX = TRUE,
+                                     scrollY = '300px',
+                                     scrollCollapse = TRUE,
+                                     dom = 'Bfrtip',
+                                     buttons =
+                                         list(list(
+                                             extend = 'collection',
+                                             buttons = list(list(extend='csv',
+                                                                 filename = 'CA_Tribal_Wells'),
+                                                            list(extend='excel',
+                                                                 title = NULL,
+                                                                 filename = 'CA_Tribal_Wells')
+                                             ),
+                                             text = 'Download Data'),
+                                             'colvis'
+                                         )
+                      ),
+                      rownames = FALSE
+            ) %>%
                 # add padding to each row
-                formatStyle(names(state$wellsTable), height=75)
-            return(result)
-        })
+                formatStyle(names(state$wellsTable), height=75),
+            server = FALSE
+        )
+
         
         # SSWS table
-        output$SSWSTable <- renderDT(state$SSWSTable, options = list(scrollX=TRUE, scrollY='300px', scrollCollapse=TRUE))
+        output$SSWSTable <- renderDT(
+            state$SSWSTable, 
+            extensions = c('Buttons', 'Scroller'),
+            options = list(scrollX = TRUE, 
+                           scrollY = '300px', 
+                           scrollCollapse = TRUE,
+                           dom = 'Bfrtip',
+                           buttons = list(
+                               list(
+                                   extend = 'collection',
+                                   buttons = list(list(extend='csv',
+                                                       filename = 'CA_Tribal_SSWS'),
+                                                  list(extend='excel',
+                                                       title = NULL,
+                                                       filename = 'CA_Tribal_SSWS')),
+                                   text = 'Download Data'),
+                               'colvis')),
+            server = FALSE, 
+            rownames = FALSE
+        )
         
         
         
