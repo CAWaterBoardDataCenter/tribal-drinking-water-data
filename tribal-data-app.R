@@ -106,18 +106,26 @@ ui <- tagList(
                         # Sidebar layout with input and output definitions
                         sidebarLayout(
                             # 2 --- Sidebar ----
-                            sidebarPanel(id='sidebar',
+                            sidebarPanel(id='sidebar', 
+                                         style='background-color:transparent; border-left:transparent;border-top:transparent;border-bottom:transparent',
                                          
                                          # Inputs
-                                         selectInput(inputId = 'tribal_boundaries_selected',
-                                                     label = 'Select Tribal Boundaries:',
-                                                     choices = names(list_tribal_data)
+                                         wellPanel(
+                                             fluidRow(style='',
+                                                      column(width = 12,
+                                                             selectInput(inputId = 'tribal_boundaries_selected',
+                                                                         label = 'Select Tribal Boundaries:',
+                                                                         choices = names(list_tribal_data)))
+                                             )
                                          ), 
-                                         
-                                         # Outputs
-                                         h4('Tribal Lands with Mobile Home Parks'),
-                                         # Bar chart output
-                                         plotlyOutput('MHPBarChart')
+                                         # Outputs                                         
+                                         wellPanel(
+                                             fluidRow(style='',
+                                                      column(width = 12,
+                                                             h4('Tribal Lands with Mobile Home Parks'),
+                                                             plotlyOutput('MHPBarChart'))
+                                             )
+                                         )
                                          
                             ), # end of sidebarPanel
                             
@@ -126,20 +134,28 @@ ui <- tagList(
                             
                             mainPanel(
                                 column(width=12, style='padding-left:0px',
+                                       # fluidRow(
+                                       #     div(style = "display:inline-block; vertical-align:top;padding-bottom:8px",
+                                       #         actionButton("showpanel", "Show/Hide Sidebar", 
+                                       #                      class = "buttonstyle", icon = icon('bars'), 
+                                       #                      style = 'padding:4px; font-size:80%') 
+                                       #     )
+                                       # ),
                                        fluidRow(
-                                           div(style = "display:inline-block; vertical-align:top;padding-bottom:8px",
-                                               actionButton("showpanel", "Show/Hide Sidebar", 
-                                                            class = "buttonstyle", icon = icon('bars'), 
-                                                            style = 'padding:4px; font-size:80%') 
-                                           )
+                                           leafletOutput(outputId = 'map1', 
+                                                         width ='100%', 
+                                                         height = 400) %>% 
+                                               withSpinner(color="#0dc5c1")
                                        ),
                                        fluidRow(
-                                           leafletOutput(outputId = 'map1', width='100%', height = 400) %>% withSpinner(color="#0dc5c1")
+                                           hr()
                                        ),
                                        fluidRow(
-                                           h4('Mobile Home Parks - Details'),
+                                           h4('Mobile Home Parks - Details',
+                                              style='text-align:center'),
                                            # Table output
-                                           DTOutput('MHPTable', width='100%')
+                                           DTOutput(outputId = 'MHPTable', 
+                                                    width='100%')
                                        )
                                 )
                             ) # end of mainPanel
@@ -155,30 +171,51 @@ ui <- tagList(
                                          
                                          wellPanel(
                                              fluidRow(style='',
-                                                      column(width = 12, selectInput(inputId = 'tribal_boundaries_selected2', label = 'Select Tribal Boundaries', names(list_tribal_data)))   
+                                                      column(width = 12, 
+                                                             selectInput(inputId = 'tribal_boundaries_selected2', 
+                                                                         label = 'Select Tribal Boundaries:', 
+                                                                         names(list_tribal_data)))   
                                              )
                                          ),
                                          wellPanel(
                                              fluidRow(style='',
-                                                      column(width = 12, h4('Tribal Lands with Wells'), plotlyOutput('wellsBarChart', height = '500px'))
+                                                      column(width = 12, 
+                                                             h4('Tribal Lands with Drinking Water Wells'), 
+                                                             plotlyOutput('wellsBarChart', 
+                                                                          height = '500px'))
                                              )
                                          ),
                                          wellPanel(
                                              fluidRow(
-                                                 column(width = 12, h4('Tribal Lands with SSWS'), plotlyOutput('SSWSBarChart', height = '200px'))
+                                                 column(width = 12, 
+                                                        h4('Tribal Lands with State Small Water Systems (SSWS)'), 
+                                                        plotlyOutput('SSWSBarChart', 
+                                                                     height = '200px'))
                                              )
                                          )
                             ),
                             
                             mainPanel(
                                 fluidRow(
-                                    column(width=12, style='padding-left:0px;', leafletOutput(outputId = 'map2'), hr())  
+                                    column(width=12, 
+                                           style='padding-left:0px;', 
+                                           leafletOutput(outputId = 'map2'), 
+                                           hr())  
                                 ),
                                 fluidRow(
-                                    column(width=12, style='padding-left:0px;', h4('Wells table', style='text-align:center'), DTOutput(outputId = 'wellsTable'), hr())
+                                    column(width=12, 
+                                           style='padding-left:0px;', 
+                                           h4('Drinking Water Wells - Details', 
+                                              style='text-align:center'), 
+                                           DTOutput(outputId = 'wellsTable'), 
+                                           hr())
                                 ),
                                 fluidRow(
-                                    column(width=12, style='padding-left:0px; margin-top: 15px', h4('SSWS table', style='text-align:center'), DTOutput(outputId = 'SSWSTable'))
+                                    column(width=12, 
+                                           style='padding-left:0px; margin-top: 15px', 
+                                           h4('State Small Water Systems (SSWS) - Details', 
+                                              style='text-align:center'), 
+                                           DTOutput(outputId = 'SSWSTable'))
                                 )
                             )
                         ) # end of sidebar layout
