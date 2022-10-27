@@ -106,18 +106,26 @@ ui <- tagList(
                         # Sidebar layout with input and output definitions
                         sidebarLayout(
                             # 2 --- Sidebar ----
-                            sidebarPanel(id='sidebar',
+                            sidebarPanel(id='sidebar', 
+                                         style='background-color:transparent; border-left:transparent;border-top:transparent;border-bottom:transparent',
                                          
                                          # Inputs
-                                         selectInput(inputId = 'tribal_boundaries_selected',
-                                                     label = 'Select Tribal Boundaries:',
-                                                     choices = names(list_tribal_data)
+                                         wellPanel(
+                                             fluidRow(style='',
+                                                      column(width = 12,
+                                                             selectInput(inputId = 'tribal_boundaries_selected',
+                                                                         label = 'Select Tribal Boundaries:',
+                                                                         choices = names(list_tribal_data)))
+                                             )
                                          ), 
-                                         
-                                         # Outputs
-                                         h4('Tribal Lands with Mobile Home Parks'),
-                                         # Bar chart output
-                                         plotlyOutput('MHPBarChart')
+                                         # Outputs                                         
+                                         wellPanel(
+                                             fluidRow(style='',
+                                                      column(width = 12,
+                                                             h4('Tribal Lands with Mobile Home Parks'),
+                                                             plotlyOutput('MHPBarChart'))
+                                             )
+                                         )
                                          
                             ), # end of sidebarPanel
                             
@@ -165,14 +173,14 @@ ui <- tagList(
                                              fluidRow(style='',
                                                       column(width = 12, 
                                                              selectInput(inputId = 'tribal_boundaries_selected2', 
-                                                                         label = 'Select Tribal Boundaries', 
+                                                                         label = 'Select Tribal Boundaries:', 
                                                                          names(list_tribal_data)))   
                                              )
                                          ),
                                          wellPanel(
                                              fluidRow(style='',
                                                       column(width = 12, 
-                                                             h4('Tribal Lands with Wells'), 
+                                                             h4('Tribal Lands with Drinking Water Wells'), 
                                                              plotlyOutput('wellsBarChart', 
                                                                           height = '500px'))
                                              )
@@ -180,7 +188,7 @@ ui <- tagList(
                                          wellPanel(
                                              fluidRow(
                                                  column(width = 12, 
-                                                        h4('Tribal Lands with SSWS'), 
+                                                        h4('Tribal Lands with State Small Water Systems (SSWS)'), 
                                                         plotlyOutput('SSWSBarChart', 
                                                                      height = '200px'))
                                              )
